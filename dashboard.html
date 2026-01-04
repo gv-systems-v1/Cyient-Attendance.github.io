@@ -23,7 +23,7 @@
             <div class="header-flex">
                 <div>
                     <h2>My Attendance</h2>
-                    <p id="todayDateDisplay" style="color: var(--primary); font-weight: 600; margin: 5px 0;"></p>
+                    <p id="todayDateDisplay" style="color: #2563eb; font-weight: 600; margin: 5px 0;"></p>
                 </div>
                 
                 <div class="action-buttons">
@@ -46,7 +46,14 @@
             </div>
 
             <div class="calendar-card">
-                <div class="calendar-header-text">January 2026</div>
+                <div class="calendar-header-flex">
+                    <div class="nav-controls">
+                        <button class="nav-arrow" id="prevMonth">❮</button>
+                        <button class="nav-arrow" id="nextMonth">❯</button>
+                        <button class="btn-today" id="jumpToday">Jump to Today</button>
+                    </div>
+                    <div class="calendar-header-text" id="monthDisplay">Month Year</div>
+                </div>
                 <div class="calendar-grid" id="calendar"></div>
             </div>
         </div>
@@ -70,9 +77,22 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- FIX 1: Generate LOCAL Today's Date String ---
         const now = new Date();
         const localDate = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+        let currentViewDate = new Date();
+
+        // 2026 Holidays
+        const holidays = {
+            "2026-01-01": "New Year",
+            "2026-01-15": "Makar Sankranti",
+            "2026-01-26": "Republic Day",
+            "2026-05-01": "Labour Day",
+            "2026-09-14": "Ganesh Chaturthi",
+            "2026-10-02": "Gandhi Jayanti",
+            "2026-10-21": "Dussehra",
+            "2026-12-25": "Christmas"
+        };
+
         document.getElementById('todayDateDisplay').innerText = "Today: " + localDate;
 
         onAuthStateChanged(auth, async user => {
@@ -87,15 +107,31 @@
             }
         });
 
-        // FIX 2: Check if already marked for today and disable buttons
+        document.getElementById('prevMonth').onclick = () => {
+            currentViewDate.setMonth(currentViewDate.getMonth() - 1);
+            loadCal(auth.currentUser.uid);
+        };
+
+        document.getElementById('nextMonth').onclick = () => {
+            currentViewDate.setMonth(currentViewDate.getMonth() + 1);
+            loadCal(auth.currentUser.uid);
+        };
+
+        document.getElementById('jumpToday').onclick = () => {
+            currentViewDate = new Date();
+            loadCal(auth.currentUser.uid);
+        };
+
         async function checkTodayStatus(uid) {
             const todayDoc = await getDoc(doc(db, "attendance", `${uid}_${localDate}`));
             if (todayDoc.exists()) {
-                document.getElementById('btnP').disabled = true;
-                document.getElementById('btnL').disabled = true;
-                document.getElementById('btnP').style.opacity = "0.5";
-                document.getElementById('btnL').style.opacity = "0.5";
-                document.querySelector('.btn-title').innerText = "Marked Today";
+                const btnP = document.getElementById('btnP');
+                const btnL = document.getElementById('btnL');
+                btnP.disabled = true;
+                btnL.disabled = true;
+                btnP.style.opacity = "0.5";
+                btnL.style.opacity = "0.5";
+                document.querySelectorAll('.btn-title').forEach(el => el.innerText = "Marked Today");
             }
         }
 
@@ -103,7 +139,7 @@
             try {
                 await setDoc(doc(db, "attendance", `${auth.currentUser.uid}_${localDate}`), { 
                     uid: auth.currentUser.uid, 
-                    date: localDate, // Using the localDate fixed above
+                    date: localDate, 
                     status: s, 
                     name: document.getElementById('userName').innerText 
                 });
@@ -112,10 +148,6 @@
                 Swal.fire('Error', 'Failed to mark attendance', 'error');
             }
         }
-
-        document.getElementById('btnP').onclick = () => mark('Present');
-        document.getElementById('btnL').onclick = () => mark('Leave');
-        document.getElementById('logoutBtn').onclick = () => signOut(auth);
 
         async function loadCal(uid) {
             const q = query(collection(db, "attendance"), where("uid", "==", uid));
@@ -126,39 +158,53 @@
             const cal = document.getElementById('calendar');
             cal.innerHTML = ""; 
 
+            const vYear = currentViewDate.getFullYear();
+            const vMonth = currentViewDate.getMonth();
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            document.getElementById('monthDisplay').innerText = `${monthNames[vMonth]} ${vYear}`;
+
             const daysArr = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             daysArr.forEach(day => {
                 cal.innerHTML += `<div class="day-name">${day}</div>`;
             });
 
-            const firstDayIndex = new Date(2026, 0, 1).getDay(); 
+            const firstDayIndex = new Date(vYear, vMonth, 1).getDay(); 
+            const daysInMonth = new Date(vYear, vMonth + 1, 0).getDate();
+
             for(let x = 0; x < firstDayIndex; x++) {
                 cal.innerHTML += `<div class="day day-hidden"></div>`;
             }
             
-            for(let i=1; i<=31; i++) {
-                const dateKey = `2026-01-${i < 10 ? '0'+i : i}`;
+            for(let i = 1; i <= daysInMonth; i++) {
+                const monthPad = String(vMonth + 1).padStart(2, '0');
+                const dayPad = String(i).padStart(2, '0');
+                const dateKey = `${vYear}-${monthPad}-${dayPad}`;
+                
+                const dayOfWeek = new Date(vYear, vMonth, i).getDay();
+                const holidayName = holidays[dateKey];
+                
                 let cls = "";
                 if (logs[dateKey] === 'Present') cls = 'present';
                 else if (logs[dateKey] === 'Leave') cls = 'leave';
                 
-                // Highlight today's circle specifically
                 const todayCls = (dateKey === localDate) ? "today-circle" : "";
                 
-                cal.innerHTML += `<div class="day ${cls} ${todayCls}">${i}</div>`;
+                // Set Weekend or Holiday logic
+                let specialCls = "";
+                if (holidayName) specialCls = "holiday";
+                else if (dayOfWeek === 0 || dayOfWeek === 6) specialCls = "weekend";
+
+                cal.innerHTML += `
+                    <div class="day ${cls} ${todayCls} ${specialCls}">
+                        ${i}
+                        ${holidayName ? `<span class="holiday-label">${holidayName}</span>` : ""}
+                    </div>`;
             }
         }
-    </script>
 
-    <style>
-        /* CSS to highlight today on the calendar */
-        .today-circle {
-            border: 2px solid var(--primary);
-            font-weight: 800;
-        }
-        .btn-dash:disabled {
-            cursor: not-allowed;
-        }
-    </style>
+        document.getElementById('btnP').onclick = () => mark('Present');
+        document.getElementById('btnL').onclick = () => mark('Leave');
+        document.getElementById('logoutBtn').onclick = () => signOut(auth);
+    </script>
 </body>
 </html>
