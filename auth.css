@@ -1,5 +1,3 @@
-authcss
-
 :root {
     --primary: #2563eb;
     --primary-hover: #1d4ed8;
@@ -230,3 +228,4 @@ body {
         padding: 10px 14px; /* Slightly smaller padding for small screens */
     }
 }
+
