@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Attendance Portal</title>
+    <link rel="icon" type="image/jpg" href="Cyient-Logo.jpg">
+    <link rel="stylesheet" href="auth.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+
+    
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="info-section">
+            <div class="info-content">
+                <h1>Cyient Attendance</h1>
+                <p>Welcome back! Please login to access your dashboard and manage your attendance records at the Warangal Campus.</p>
+                <div class="badge">Enterprise Edition v2.0</div>
+            </div>
+        </div>
+
+        <div class="auth-section">
+            <div class="auth-card">
+                <div class="header">
+                    <h2>Welcome Back</h2>
+                    <p>Enter your credentials to access your account</p>
+                </div>
+                
+                <div class="form-group">
+                    <label>Work Email</label>
+                    <input type="email" id="email" placeholder="name@cyient18.com">
+                </div>
+
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" placeholder="••••••••">
+                </div>
+
+                <button class="btn-primary" id="loginBtn">Login to Portal</button>
+
+                <div class="auth-footer">
+                    Need an account? <a href="register.html">Register Now</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+        // Your Firebase Configuration
+        const firebaseConfig = { 
+            apiKey: "AIzaSyC_ZrkX3tODa4nDyl9DhAX0llp43i-vAHA", 
+            authDomain: "attendance-management-sy-5d69a.firebaseapp.com", 
+            projectId: "attendance-management-sy-5d69a", 
+            storageBucket: "attendance-management-sy-5d69a.firebasestorage.app", 
+            messagingSenderId: "654602757590", 
+            appId: "1:654602757590:web:aeb342f787081930d3b077" 
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        document.getElementById('loginBtn').onclick = async () => {
+            const btn = document.getElementById('loginBtn');
+            const e = document.getElementById('email').value.trim();
+            const p = document.getElementById('password').value;
+
+            if (!e || !p) {
+                Swal.fire('Required', 'Please enter both email and password', 'warning');
+                return;
+            }
+
+            try {
+                // UI Loading State
+                btn.innerText = "Authenticating...";
+                btn.style.opacity = "0.7";
+
+                // Firebase Auth
+                const cred = await signInWithEmailAndPassword(auth, e, p);
+                
+                // Fetch user role from Firestore
+                const userDoc = await getDoc(doc(db, "users", cred.user.uid));
+                
+                if (userDoc.exists()) {
+                    const role = userDoc.data().role;
+                    
+                    // Success Toast
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 2000,
+                        timerProgressBar: true
+                    });
+
+                    await Toast.fire({
+                        icon: 'success',
+                        title: 'Signed in successfully'
+                    });
+
+                    // Redirect based on role
+                    window.location.href = (role === 'admin') ? "admin.html" : "dashboard.html";
+                } else {
+                    Swal.fire('Error', 'User data not found in database', 'error');
+                }
+
+            } catch (err) { 
+                Swal.fire('Login Failed', 'Invalid email or password', 'error');
+                btn.innerText = "Login to Portal";
+                btn.style.opacity = "1";
+            }
+        };
+    </script>
+</body>
+</html>

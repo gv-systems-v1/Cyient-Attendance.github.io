@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register | Attendance Portal</title>
+    <link rel="stylesheet" href="auth.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="info-section">
+            <div class="info-content">
+                <h1>Cyient Attendance</h1>
+                <p>Streamline your workflow with our next-generation employee tracking system.</p>
+                <div class="badge">Enterprise Edition v2.0</div>
+            </div>
+        </div>
+
+        <div class="auth-section">
+            <div class="auth-card">
+                <div class="header">
+                    <h2>Create Account</h2>
+                    <p>Enter your details to get started</p>
+                </div>
+                
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="name" placeholder="John Doe">
+                </div>
+
+                <div class="form-group">
+                    <label>Work Email</label>
+                    <input type="email" id="email" placeholder="name@cyient18.com">
+                </div>
+
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" placeholder="••••••••">
+                </div>
+
+                <div class="form-group">
+                    <label>Account Role</label>
+                    <select id="role">
+                        <option value="employee">Employee</option>
+                        <option value="admin">Administrator</option>
+                    </select>
+                </div>
+
+                <button class="btn-primary" id="regBtn">Create Account</button>
+
+                <div class="auth-footer">
+                    Already have an account? <a href="index.html">Sign In</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+        const firebaseConfig = { 
+            apiKey: "AIzaSyC_ZrkX3tODa4nDyl9DhAX0llp43i-vAHA", 
+            authDomain: "attendance-management-sy-5d69a.firebaseapp.com", 
+            projectId: "attendance-management-sy-5d69a", 
+            storageBucket: "attendance-management-sy-5d69a.firebasestorage.app", 
+            messagingSenderId: "654602757590", 
+            appId: "1:654602757590:web:aeb342f787081930d3b077" 
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        document.getElementById('regBtn').onclick = async () => {
+            const btn = document.getElementById('regBtn');
+            const n = document.getElementById('name').value.trim();
+            const e = document.getElementById('email').value.trim().toLowerCase();
+            const p = document.getElementById('password').value;
+            const r = document.getElementById('role').value;
+
+            if (!n || !e || !p) {
+                alert("Please fill in all fields.");
+                return;
+            }
+
+            if (r === 'admin' && !e.endsWith('@cyient18.com')) {
+                alert("ACCESS DENIED: Admin accounts require a @cyient18.com domain.");
+                return;
+            }
+
+            try {
+                btn.innerText = "Processing...";
+                btn.style.opacity = "0.7";
+                
+                const res = await createUserWithEmailAndPassword(auth, e, p);
+                await setDoc(doc(db, "users", res.user.uid), { 
+                    fullName: n, 
+                    email: e, 
+                    role: r,
+                    createdAt: new Date().toISOString()
+                });
+
+                alert("Account successfully created!");
+                window.location.href = (r === 'admin') ? "admin.html" : "dashboard.html";
+
+            } catch (err) { 
+                alert("Error: " + err.message);
+                btn.innerText = "Create Account";
+                btn.style.opacity = "1";
+            }
+        };
+    </script>
+</body>
+</html>

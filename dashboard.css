@@ -1,0 +1,215 @@
+:root {
+    --primary: #2563eb;
+    --dark-bg: #0f172a;
+    --main-bg: #f8fafc;
+    --success: #10b981;
+    --danger: #ef4444;
+    --white: #ffffff;
+    --border: #e2e8f0;
+}
+
+* { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box; 
+    font-family: 'Inter', sans-serif; 
+}
+
+body { 
+    background: var(--main-bg); 
+}
+
+.dashboard-wrapper { 
+    display: flex; 
+    min-height: 100vh; 
+}
+
+/* --- SIDEBAR --- */
+.sidebar {
+    width: 260px; 
+    background: var(--dark-bg); 
+    color: white;
+    padding: 40px 25px; 
+    position: fixed; 
+    height: 100%;
+    display: flex; 
+    flex-direction: column;
+    z-index: 100;
+    transition: all 0.3s ease;
+}
+
+.logo { font-size: 24px; font-weight: 800; color: var(--primary); margin-bottom: 50px; }
+.user-profile p { font-size: 11px; color: #94a3b8; text-transform: uppercase; margin-bottom: 5px; }
+#userName { font-size: 18px; font-weight: 600; margin-bottom: 40px; }
+
+.logout-btn {
+    margin-top: auto; 
+    padding: 12px; 
+    background: #334155;
+    border: none; 
+    color: white; 
+    border-radius: 10px; 
+    cursor: pointer;
+}
+
+/* --- MAIN CONTENT --- */
+.main-content { 
+    margin-left: 260px; 
+    padding: 40px; 
+    width: calc(100% - 260px); 
+    transition: all 0.3s ease;
+}
+
+.header-flex { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 30px; 
+    flex-wrap: wrap; 
+    gap: 20px;
+}
+
+/* --- BUTTONS --- */
+.action-buttons { 
+    display: flex; 
+    gap: 15px; 
+}
+
+.btn-dash {
+    display: flex; 
+    align-items: center; 
+    padding: 12px 20px;
+    border: none; 
+    border-radius: 14px; 
+    cursor: pointer;
+    transition: all 0.3s; 
+    color: white;
+    flex: 1; /* Allow buttons to grow evenly */
+    min-width: 160px;
+}
+
+.btn-icon { 
+    font-size: 18px; 
+    margin-right: 12px; 
+    background: rgba(255,255,255,0.2); 
+    width: 30px; 
+    height: 30px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    border-radius: 8px; 
+    flex-shrink: 0;
+}
+
+.btn-title { display: block; font-weight: 700; font-size: 14px; }
+.btn-desc { font-size: 10px; opacity: 0.8; }
+.btn-present { background: linear-gradient(135deg, #10b981, #059669); }
+.btn-leave { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+.btn-dash:hover { transform: translateY(-3px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
+
+/* --- CALENDAR --- */
+.calendar-card { 
+    background: white; 
+    padding: 30px; 
+    border-radius: 20px; 
+    border: 1px solid var(--border); 
+    overflow-x: auto; /* Allow horizontal scroll if grid is too wide */
+}
+
+.calendar-header-text { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+
+.calendar-grid { 
+    display: grid; 
+    grid-template-columns: repeat(7, 1fr); 
+    gap: 10px; 
+    min-width: 600px; /* Ensures calendar doesn't crush on small phones */
+}
+
+.day-name {
+    text-align: center; font-weight: 700; font-size: 12px;
+    color: #94a3b8; text-transform: uppercase; padding-bottom: 10px;
+}
+
+.day {
+    height: 80px; 
+    border: 1px solid var(--border); 
+    border-radius: 12px;
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    font-weight: bold; 
+    color: #64748b;
+}
+
+.day-hidden { border: none; background: transparent; }
+.present { background: #dcfce7 !important; color: #15803d; border-color: #86efac; }
+.leave { background: #fee2e2 !important; color: #b91c1c; border-color: #fca5a5; }
+
+/* --- RESPONSIVE BREAKPOINTS --- */
+
+/* Tablet (Screens under 1024px) */
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 80px; /* Shrink sidebar to icon-width (optional) */
+        padding: 40px 15px;
+    }
+    
+    /* Hide text in sidebar for tablet if you want, or just hide sidebar */
+    .sidebar .logo, .sidebar #userName, .sidebar .user-profile p {
+        display: none;
+    }
+
+    .main-content {
+        margin-left: 80px;
+        width: calc(100% - 80px);
+        padding: 30px;
+    }
+}
+
+/* Mobile Phones (Screens under 768px) */
+@media (max-width: 768px) {
+    .dashboard-wrapper {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+        padding: 20px;
+    }
+
+    .sidebar .logo, .sidebar #userName {
+        display: block;
+        margin-bottom: 10px;
+    }
+
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+        padding: 20px;
+    }
+
+    .header-flex {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .action-buttons {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .btn-dash {
+        width: 100%;
+    }
+    
+    .calendar-card {
+        padding: 15px;
+    }
+    
+    .day {
+        height: 60px; /* Smaller boxes on mobile */
+    }
+}

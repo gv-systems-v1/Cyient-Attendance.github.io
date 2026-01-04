@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | Nexus</title>
+    <link rel="stylesheet" href="admin.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+
+<div class="dashboard-wrapper">
+    <aside class="sidebar">
+        <h2>Cyient Admin</h2>
+        
+        <span class="nav-label">Date Filter</span>
+        <input type="date" id="datePicker">
+
+        <span class="nav-label">Management</span>
+        <button class="btn btn-success" onclick="exportToExcel()">📊 Export to Excel</button>
+        <button class="btn btn-edit" style="margin-top: 10px; width: 100%; background: var(--primary);" onclick="markNewEntry()">➕ Mark Attendance</button>
+        
+        <button class="btn btn-danger" id="logoutBtn" style="margin-top: 20px;">Log out</button>
+    </aside>
+
+    <main class="main-content">
+        <header class="header">
+            <div>
+                <h1 id="pageTitle">Attendance Overview</h1>
+                <p style="color: var(--text-muted); margin: 5px 0;">
+                    Viewing records for: <span id="currentDateDisplay" style="color: var(--primary); font-weight: 700;"></span>
+                </p>
+            </div>
+            <div class="search-box">
+                <input type="text" id="staffSearch" placeholder="Search marked employees...">
+            </div>
+        </header>
+
+        <section class="admin-grid">
+            <div class="stat-card">
+                <h3 style="margin: 0 0 1.5rem 0; font-size: 1rem; color: var(--text-muted);">Attendance Ratio</h3>
+                <div style="height: 220px;">
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <h3 style="margin: 0 0 1.5rem 0; font-size: 1rem; color: var(--text-muted);">Quick Summary</h3>
+                <ul class="summary-list">
+                    <li><span>Total Employees</span> <strong id="sumTotal">0</strong></li>
+                    <li><span>Present Today</span> <strong id="sumPresent" style="color: var(--success);">0</strong></li>
+                    <li><span>On Leave / Absent</span> <strong id="sumLeave" style="color: var(--danger);">0</strong></li>
+                </ul>
+                <p style="font-size: 0.75rem; color: gray; margin-top: 10px;">* Only marked staff appear in the list below.</p>
+            </div>
+        </section>
+
+        <section class="table-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Employee Name</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="adminBody"></tbody>
+            </table>
+            <div id="emptyState" style="text-align: center; padding: 20px; display: none; color: gray;">
+                No employees marked for this date yet.
+            </div>
+        </section>
+    </main>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs, query, where, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyC_ZrkX3tODa4nDyl9DhAX0llp43i-vAHA",
+        authDomain: "attendance-management-sy-5d69a.firebaseapp.com",
+        projectId: "attendance-management-sy-5d69a",
+        storageBucket: "attendance-management-sy-5d69a.firebasestorage.app",
+        messagingSenderId: "654602757590",
+        appId: "1:654602757590:web:aeb342f787081930d3b077"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let attendanceChart = null;
+    let markedData = []; 
+    let allStaffMaster = []; // Used for the "Total" count and the Manual Mark dropdown
+    
+    const datePicker = document.getElementById('datePicker');
+    const searchInput = document.getElementById('staffSearch');
+
+    // Set Date to Today
+    const now = new Date();
+    const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    datePicker.value = today;
+    datePicker.max = today;
+
+    onAuthStateChanged(auth, async user => {
+        if(!user) window.location.href = "index.html";
+        else {
+            const d = await getDoc(doc(db, "users", user.uid));
+            if(d.exists() && d.data().role !== 'admin') window.location.href = "dashboard.html";
+            else {
+                await fetchTotalStaff();
+                loadReport(datePicker.value);
+            }
+        }
+    });
+
+    // Get all employees to know the "Total" and for manual marking
+    async function fetchTotalStaff() {
+        const snap = await getDocs(collection(db, "users"));
+        allStaffMaster = [];
+        snap.forEach(uDoc => {
+            if(uDoc.data().role === 'employee') {
+                allStaffMaster.push({ uid: uDoc.id, fullName: uDoc.data().fullName });
+            }
+        });
+        document.getElementById('sumTotal').innerText = allStaffMaster.length;
+    }
+
+    async function loadReport(date) {
+        document.getElementById('currentDateDisplay').innerText = date;
+        const attSnap = await getDocs(query(collection(db, "attendance"), where("date", "==", date)));
+        
+        markedData = [];
+        attSnap.forEach(doc => {
+            const data = doc.data();
+            markedData.push({
+                uid: data.uid,
+                fullName: data.name,
+                status: data.status,
+                date: data.date
+            });
+        });
+
+        renderDisplay(markedData);
+    }
+
+    function renderDisplay(employees) {
+        const tbody = document.getElementById('adminBody');
+        const emptyState = document.getElementById('emptyState');
+        tbody.innerHTML = "";
+        
+        if (employees.length === 0) {
+            emptyState.style.display = "block";
+        } else {
+            emptyState.style.display = "none";
+        }
+
+        let presentCount = 0; 
+        let absentCount = 0;
+
+        employees.forEach(emp => {
+            const isPresent = emp.status === "Present";
+            if(isPresent) presentCount++; else absentCount++;
+            
+            tbody.innerHTML += `
+                <tr>
+                    <td style="font-weight: 600;">${emp.fullName}</td>
+                    <td><span class="badge ${isPresent ? 'bg-p' : 'bg-l'}">${emp.status}</span></td>
+                    <td>
+                        <button class="btn btn-edit" onclick="editAttendance('${emp.uid}', '${emp.fullName}', '${emp.status}')">✏️ Edit</button>
+                    </td>
+                </tr>`;
+        });
+
+        document.getElementById('sumPresent').innerText = presentCount;
+        document.getElementById('sumLeave').innerText = absentCount;
+        updateChart(presentCount, absentCount);
+    }
+
+    // Function to mark an employee who isn't on today's list yet
+    window.markNewEntry = async () => {
+        const staffOptions = {};
+        allStaffMaster.forEach(s => staffOptions[s.uid] = s.fullName);
+
+        const { value: selectedUid } = await Swal.fire({
+            title: 'Select Employee',
+            input: 'select',
+            inputOptions: staffOptions,
+            showCancelButton: true
+        });
+
+        if (selectedUid) {
+            const name = staffOptions[selectedUid];
+            editAttendance(selectedUid, name, "Present");
+        }
+    };
+
+    window.editAttendance = async (uid, name, currentStatus) => {
+        const { value: newStatus } = await Swal.fire({
+            title: `Update Attendance`,
+            text: `Set status for ${name}`,
+            input: 'select',
+            inputOptions: { 'Present': 'Present', 'Absent': 'Absent' },
+            inputValue: currentStatus,
+            showCancelButton: true
+        });
+
+        if (newStatus) {
+            const docId = `${uid}_${datePicker.value}`;
+            await setDoc(doc(db, "attendance", docId), {
+                uid: uid,
+                name: name,
+                date: datePicker.value,
+                status: newStatus,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+            loadReport(datePicker.value);
+        }
+    };
+
+    function updateChart(p, l) {
+        const ctx = document.getElementById('pieChart').getContext('2d');
+        if(attendanceChart) attendanceChart.destroy();
+        attendanceChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Present', 'Absent'],
+                datasets: [{ data: [p, l], backgroundColor: ['#10b981', '#f43f5e'] }]
+            },
+            options: { maintainAspectRatio: false }
+        });
+    }
+
+    window.exportToExcel = () => {
+        if(markedData.length === 0) return Swal.fire("No Data", "Nothing to export.", "info");
+        
+        // Removed UID from export
+        const excelRows = markedData.map(emp => ({
+            "Employee Name": emp.fullName,
+            "Date": emp.date,
+            "Status": emp.status
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(excelRows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Attendance");
+        XLSX.writeFile(wb, `Attendance_${datePicker.value}.xlsx`);
+    };
+
+    searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        renderDisplay(markedData.filter(emp => emp.fullName.toLowerCase().includes(term)));
+    });
+
+    datePicker.addEventListener('change', (e) => loadReport(e.target.value));
+
+    document.getElementById('logoutBtn').onclick = () => {
+        signOut(auth).then(() => window.location.href = "index.html");
+    };
+</script>
+
+<style>
+    .btn-edit { background: #6366f1; color: white; padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+    .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; color: white; display: inline-block; min-width: 80px; text-align: center; }
+    .bg-p { background: #10b981; } 
+    .bg-l { background: #f43f5e; }
+</style>
+</body>
+</html>

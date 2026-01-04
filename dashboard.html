@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Dashboard | WorkFlow</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+
+    <div class="dashboard-wrapper">
+        <div class="sidebar">
+            <div class="logo">WorkFlow</div>
+            <div class="user-profile">
+                <p>Logged in as</p>
+                <div id="userName">Loading...</div>
+            </div>
+            <button class="logout-btn" id="logoutBtn">Logout</button>
+        </div>
+
+        <div class="main-content">
+            <div class="header-flex">
+                <div>
+                    <h2>My Attendance</h2>
+                    <p id="todayDateDisplay" style="color: var(--primary); font-weight: 600; margin: 5px 0;"></p>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="btn-dash btn-present" id="btnP">
+                        <span class="btn-icon">✓</span>
+                        <div class="btn-text">
+                            <span class="btn-title">Check In</span>
+                            <span class="btn-desc">Present</span>
+                        </div>
+                    </button>
+
+                    <button class="btn-dash btn-leave" id="btnL">
+                        <span class="btn-icon">✕</span>
+                        <div class="btn-text">
+                            <span class="btn-title">On Leave</span>
+                            <span class="btn-desc">Absent</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="calendar-card">
+                <div class="calendar-header-text">January 2026</div>
+                <div class="calendar-grid" id="calendar"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, query, where } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+        const firebaseConfig = { 
+            apiKey: "AIzaSyC_ZrkX3tODa4nDyl9DhAX0llp43i-vAHA", 
+            authDomain: "attendance-management-sy-5d69a.firebaseapp.com", 
+            projectId: "attendance-management-sy-5d69a", 
+            storageBucket: "attendance-management-sy-5d69a.firebasestorage.app", 
+            messagingSenderId: "654602757590", 
+            appId: "1:654602757590:web:aeb342f787081930d3b077" 
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- FIX 1: Generate LOCAL Today's Date String ---
+        const now = new Date();
+        const localDate = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+        document.getElementById('todayDateDisplay').innerText = "Today: " + localDate;
+
+        onAuthStateChanged(auth, async user => {
+            if(!user) window.location.href="index.html";
+            else {
+                const d = await getDoc(doc(db, "users", user.uid));
+                if(d.exists() && d.data().role === 'admin') window.location.href="admin.html";
+                document.getElementById('userName').innerText = d.data()?.fullName || "User";
+                
+                checkTodayStatus(user.uid);
+                loadCal(user.uid);
+            }
+        });
+
+        // FIX 2: Check if already marked for today and disable buttons
+        async function checkTodayStatus(uid) {
+            const todayDoc = await getDoc(doc(db, "attendance", `${uid}_${localDate}`));
+            if (todayDoc.exists()) {
+                document.getElementById('btnP').disabled = true;
+                document.getElementById('btnL').disabled = true;
+                document.getElementById('btnP').style.opacity = "0.5";
+                document.getElementById('btnL').style.opacity = "0.5";
+                document.querySelector('.btn-title').innerText = "Marked Today";
+            }
+        }
+
+        async function mark(s) {
+            try {
+                await setDoc(doc(db, "attendance", `${auth.currentUser.uid}_${localDate}`), { 
+                    uid: auth.currentUser.uid, 
+                    date: localDate, // Using the localDate fixed above
+                    status: s, 
+                    name: document.getElementById('userName').innerText 
+                });
+                Swal.fire('Success', `Attendance marked as ${s}`, 'success').then(() => location.reload());
+            } catch (e) {
+                Swal.fire('Error', 'Failed to mark attendance', 'error');
+            }
+        }
+
+        document.getElementById('btnP').onclick = () => mark('Present');
+        document.getElementById('btnL').onclick = () => mark('Leave');
+        document.getElementById('logoutBtn').onclick = () => signOut(auth);
+
+        async function loadCal(uid) {
+            const q = query(collection(db, "attendance"), where("uid", "==", uid));
+            const snap = await getDocs(q);
+            const logs = {}; 
+            snap.forEach(d => logs[d.data().date] = d.data().status);
+            
+            const cal = document.getElementById('calendar');
+            cal.innerHTML = ""; 
+
+            const daysArr = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            daysArr.forEach(day => {
+                cal.innerHTML += `<div class="day-name">${day}</div>`;
+            });
+
+            const firstDayIndex = new Date(2026, 0, 1).getDay(); 
+            for(let x = 0; x < firstDayIndex; x++) {
+                cal.innerHTML += `<div class="day day-hidden"></div>`;
+            }
+            
+            for(let i=1; i<=31; i++) {
+                const dateKey = `2026-01-${i < 10 ? '0'+i : i}`;
+                let cls = "";
+                if (logs[dateKey] === 'Present') cls = 'present';
+                else if (logs[dateKey] === 'Leave') cls = 'leave';
+                
+                // Highlight today's circle specifically
+                const todayCls = (dateKey === localDate) ? "today-circle" : "";
+                
+                cal.innerHTML += `<div class="day ${cls} ${todayCls}">${i}</div>`;
+            }
+        }
+    </script>
+
+    <style>
+        /* CSS to highlight today on the calendar */
+        .today-circle {
+            border: 2px solid var(--primary);
+            font-weight: 800;
+        }
+        .btn-dash:disabled {
+            cursor: not-allowed;
+        }
+    </style>
+</body>
+</html>

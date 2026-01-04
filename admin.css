@@ -1,0 +1,286 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+    --primary: #6366f1;
+    --primary-hover: #4f46e5;
+    --bg-main: #f1f5f9;
+    --sidebar-bg: #0f172a;
+    --white: #ffffff;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --success: #10b981;
+    --danger: #f43f5e;
+    --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --border: #e2e8f0;
+}
+
+* { 
+    box-sizing: border-box; 
+    font-family: 'Plus Jakarta Sans', sans-serif; 
+}
+
+body { 
+    margin: 0; 
+    background: var(--bg-main); 
+    color: var(--text-main); 
+    overflow-x: hidden; 
+}
+
+.dashboard-wrapper { 
+    display: flex; 
+    min-height: 100vh; 
+}
+
+/* Sidebar */
+.sidebar {
+    width: 280px;
+    background: var(--sidebar-bg);
+    color: white;
+    padding: 2.5rem 1.5rem;
+    position: fixed;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    transition: transform 0.3s ease;
+}
+
+.sidebar h2 {
+    font-size: 1.4rem;
+    margin-bottom: 3rem;
+    background: linear-gradient(to right, #818cf8, #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+}
+
+.nav-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #64748b;
+    margin-bottom: 0.8rem;
+    display: block;
+}
+
+#datePicker {
+    width: 100%;
+    padding: 12px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    color: white;
+    margin-bottom: 2rem;
+    outline: none;
+    cursor: pointer;
+}
+
+/* Main Content */
+.main-content { 
+    flex: 1; 
+    margin-left: 280px; 
+    padding: 3rem; 
+    transition: all 0.3s ease;
+}
+
+.header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 3rem; 
+    flex-wrap: wrap; 
+    gap: 1.5rem;
+}
+
+.search-box {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 10px 18px;
+    width: 320px;
+    display: flex;
+    align-items: center;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
+
+.search-box input { 
+    border: none; 
+    outline: none; 
+    width: 100%; 
+    font-size: 0.9rem; 
+    background: transparent; 
+}
+
+/* Grid Cards */
+.admin-grid { 
+    display: grid; 
+    grid-template-columns: 1.2fr 1fr; 
+    gap: 2rem; 
+    margin-bottom: 2.5rem; 
+}
+
+.stat-card {
+    background: var(--white);
+    padding: 1.8rem;
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
+
+.summary-list { list-style: none; padding: 0; margin: 0; }
+.summary-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 1.1rem 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+.summary-list li:last-child { border-bottom: none; }
+
+/* Table Section */
+.table-card {
+    background: var(--white);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+
+table { width: 100%; border-collapse: collapse; min-width: 600px; }
+th { 
+    background: #f8fafc; 
+    padding: 1.2rem 1.5rem; 
+    text-align: left; 
+    color: var(--text-muted); 
+    font-size: 0.75rem; 
+    text-transform: uppercase; 
+    font-weight: 700; 
+}
+td { 
+    padding: 1.2rem 1.5rem; 
+    border-bottom: 1px solid #f1f5f9; 
+    font-size: 0.95rem; 
+}
+
+/* General Button Base */
+.btn {
+    padding: 12px 18px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+/* NEW: Primary Action - Mark Attendance */
+.btn-mark {
+    background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.btn-mark:hover {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(99, 102, 241, 0.4);
+}
+
+/* NEW: Secondary Action - Export Button */
+.btn-success { 
+    background: rgba(16, 185, 129, 0.1); 
+    color: var(--success); 
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.btn-success:hover { 
+    background: var(--success); 
+    color: white; 
+    transform: translateY(-2px);
+}
+
+/* Danger/Logout Button */
+.btn-danger { 
+    background: rgba(244, 63, 94, 0.1); 
+    color: var(--danger); 
+    margin-top: auto; 
+}
+.btn-danger:hover { 
+    background: var(--danger); 
+    color: white; 
+}
+
+/* Edit Button in Table */
+.btn-edit {
+    background: transparent;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    width: fit-content;
+    white-space: nowrap;
+    margin-bottom: 0;
+}
+
+.btn-edit:hover { 
+    background: var(--primary); 
+    color: white; 
+}
+
+/* Status Badges */
+.badge { 
+    padding: 5px 12px; 
+    border-radius: 6px; 
+    font-size: 0.75rem; 
+    font-weight: 700; 
+    display: inline-block;
+}
+.bg-p { background: #dcfce7; color: #15803d; } /* Present */
+.bg-l { background: #fee2e2; color: #b91c1c; } /* Absent */
+.bg-n { background: #f1f5f9; color: #64748b; } /* Not Marked */
+
+/* Responsive Media Queries */
+@media (max-width: 1024px) {
+    .sidebar { width: 240px; }
+    .main-content { margin-left: 240px; padding: 2rem; }
+    .admin-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+    .dashboard-wrapper { flex-direction: column; }
+    
+    .sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+        padding: 1.5rem;
+    }
+
+    .sidebar h2 { margin-bottom: 1.5rem; }
+    #datePicker { margin-bottom: 1rem; }
+
+    .main-content {
+        margin-left: 0;
+        padding: 1.5rem;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-box { width: 100%; }
+}
+
+/* SweetAlert Customization */
+.swal2-popup { 
+    font-family: 'Plus Jakarta Sans', sans-serif !important; 
+    border-radius: 20px !important; 
+}
