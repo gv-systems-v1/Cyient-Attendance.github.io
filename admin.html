@@ -21,7 +21,7 @@
 
         <span class="nav-label">Management</span>
         <button class="btn btn-success" onclick="exportToExcel()">📊 Export to Excel</button>
-        <button class="btn btn-edit" style="margin-top: 10px; width: 100%; background: var(--primary);" onclick="markNewEntry()">➕ Mark Attendance</button>
+        <button class="btn btn-mark" onclick="markNewEntry()">➕ Mark Attendance</button>
         
         <button class="btn btn-danger" id="logoutBtn" style="margin-top: 20px;">Log out</button>
     </aside>
@@ -96,12 +96,11 @@
 
     let attendanceChart = null;
     let markedData = []; 
-    let allStaffMaster = []; // Used for the "Total" count and the Manual Mark dropdown
+    let allStaffMaster = []; 
     
     const datePicker = document.getElementById('datePicker');
     const searchInput = document.getElementById('staffSearch');
 
-    // Set Date to Today
     const now = new Date();
     const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
     datePicker.value = today;
@@ -119,7 +118,6 @@
         }
     });
 
-    // Get all employees to know the "Total" and for manual marking
     async function fetchTotalStaff() {
         const snap = await getDocs(collection(db, "users"));
         allStaffMaster = [];
@@ -161,28 +159,37 @@
         }
 
         let presentCount = 0; 
-        let absentCount = 0;
+        let leaveCount = 0;
 
         employees.forEach(emp => {
-            const isPresent = emp.status === "Present";
-            if(isPresent) presentCount++; else absentCount++;
+            const status = emp.status;
+            let badgeCls = 'bg-l'; // Default Red for Absent/Leave
+            
+            if(status === "Present") {
+                presentCount++;
+                badgeCls = 'bg-p'; // Green
+            } else {
+                leaveCount++;
+                // If you want a different color for "Leave" vs "Absent", 
+                // you could add a logic here, but keeping Red for summary accuracy.
+                badgeCls = 'bg-l'; 
+            }
             
             tbody.innerHTML += `
                 <tr>
                     <td style="font-weight: 600;">${emp.fullName}</td>
-                    <td><span class="badge ${isPresent ? 'bg-p' : 'bg-l'}">${emp.status}</span></td>
+                    <td><span class="badge ${badgeCls}">${status}</span></td>
                     <td>
-                        <button class="btn btn-edit" onclick="editAttendance('${emp.uid}', '${emp.fullName}', '${emp.status}')">✏️ Edit</button>
+                        <button class="btn btn-edit" onclick="editAttendance('${emp.uid}', '${emp.fullName}', '${status}')">✏️ Edit</button>
                     </td>
                 </tr>`;
         });
 
         document.getElementById('sumPresent').innerText = presentCount;
-        document.getElementById('sumLeave').innerText = absentCount;
-        updateChart(presentCount, absentCount);
+        document.getElementById('sumLeave').innerText = leaveCount;
+        updateChart(presentCount, leaveCount);
     }
 
-    // Function to mark an employee who isn't on today's list yet
     window.markNewEntry = async () => {
         const staffOptions = {};
         allStaffMaster.forEach(s => staffOptions[s.uid] = s.fullName);
@@ -200,12 +207,17 @@
         }
     };
 
+    // --- ADDED "LEAVE" TO INPUT OPTIONS ---
     window.editAttendance = async (uid, name, currentStatus) => {
         const { value: newStatus } = await Swal.fire({
             title: `Update Attendance`,
             text: `Set status for ${name}`,
             input: 'select',
-            inputOptions: { 'Present': 'Present', 'Absent': 'Absent' },
+            inputOptions: { 
+                'Present': 'Present', 
+                'Absent': 'Absent',
+                'Leave': 'Leave' 
+            },
             inputValue: currentStatus,
             showCancelButton: true
         });
@@ -229,7 +241,7 @@
         attendanceChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['Present', 'Absent'],
+                labels: ['Present', 'Off-duty'],
                 datasets: [{ data: [p, l], backgroundColor: ['#10b981', '#f43f5e'] }]
             },
             options: { maintainAspectRatio: false }
@@ -238,14 +250,11 @@
 
     window.exportToExcel = () => {
         if(markedData.length === 0) return Swal.fire("No Data", "Nothing to export.", "info");
-        
-        // Removed UID from export
         const excelRows = markedData.map(emp => ({
             "Employee Name": emp.fullName,
             "Date": emp.date,
             "Status": emp.status
         }));
-
         const ws = XLSX.utils.json_to_sheet(excelRows);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Attendance");
@@ -258,18 +267,7 @@
     });
 
     datePicker.addEventListener('change', (e) => loadReport(e.target.value));
-
-    document.getElementById('logoutBtn').onclick = () => {
-        signOut(auth).then(() => window.location.href = "index.html");
-    };
+    document.getElementById('logoutBtn').onclick = () => signOut(auth).then(() => window.location.href = "index.html");
 </script>
-
-<style>
-    .btn-edit { background: #6366f1; color: white; padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
-    .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; color: white; display: inline-block; min-width: 80px; text-align: center; }
-    .bg-p { background: #10b981; } 
-    .bg-l { background: #f43f5e; }
-</style>
 </body>
 </html>
-
