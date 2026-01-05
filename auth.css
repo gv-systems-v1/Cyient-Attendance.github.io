@@ -1,3 +1,4 @@
+/* --- VARIABLES --- */
 :root {
     --primary: #2563eb;
     --primary-hover: #1d4ed8;
@@ -7,6 +8,7 @@
     --white: #ffffff;
 }
 
+/* --- RESET & GLOBAL --- */
 * {
     margin: 0;
     padding: 0;
@@ -16,14 +18,16 @@
 
 body {
     background-color: var(--bg-main);
-    /* min-height allows the page to grow if the form is long */
     min-height: 100vh;
     overflow-x: hidden;
+    display: flex;
+    flex-direction: column; /* Allows content to push footer down */
 }
 
+/* Updated Layout logic */
 .auth-wrapper {
     display: flex;
-    min-height: 100vh;
+    flex: 1 0 auto; /* This pushes the footer to the bottom of the screen */
     width: 100%;
 }
 
@@ -31,7 +35,7 @@ body {
 .info-section {
     flex: 1.2;
     background: linear-gradient(rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.7)), 
-               url('cyient.jpg');
+                url('cyient.jpg');
     background-size: cover;
     background-position: center;
     display: flex;
@@ -46,7 +50,7 @@ body {
 }
 
 .info-content h1 {
-    font-size: clamp(2.5rem, 5vw, 3.5rem); /* Responsive font size */
+    font-size: clamp(2.5rem, 5vw, 3.5rem);
     font-weight: 800;
     margin-bottom: 20px;
     letter-spacing: -2px;
@@ -84,6 +88,8 @@ body {
 .auth-card {
     width: 100%;
     max-width: 420px;
+    display: flex;
+    flex-direction: column;
 }
 
 .header {
@@ -145,7 +151,7 @@ body {
     font-weight: 600;
     cursor: pointer;
     margin-top: 10px;
-    transition: transform 0.1s active, background 0.2s;
+    transition: transform 0.1s ease, background 0.2s ease;
 }
 
 .btn-primary:hover {
@@ -156,6 +162,7 @@ body {
     transform: scale(0.98);
 }
 
+/* --- FOOTER ELEMENTS --- */
 .auth-footer {
     text-align: center;
     margin-top: 25px;
@@ -173,12 +180,25 @@ body {
     text-decoration: underline;
 }
 
+/* THE UPDATED LEGAL FOOTER (Global bottom placement) */
+.legal-footer {
+    flex-shrink: 0; /* Ensures footer doesn't get squished */
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-light);
+    border-top: 1px solid #f1f5f9;
+    padding: 20px 0;
+    line-height: 1.5;
+    opacity: 0.8;
+    background-color: var(--white); /* White background for the footer bar */
+    width: 100%;
+}
+
 /* --- RESPONSIVE MEDIA QUERIES --- */
 
-/* For Tablets (Laptops/Screens under 1024px) */
 @media (max-width: 1024px) {
     .auth-wrapper {
-        flex-direction: column; /* Stack vertically */
+        flex-direction: column;
     }
 
     .info-section {
@@ -194,7 +214,7 @@ body {
 
     .auth-section {
         padding: 50px 20px;
-        background: var(--bg-main); /* Card look on tablet/mobile */
+        background: var(--bg-main);
     }
 
     .auth-card {
@@ -205,7 +225,6 @@ body {
     }
 }
 
-/* For Mobile Phones (Screens under 480px) */
 @media (max-width: 480px) {
     .info-section {
         padding: 60px 20px;
@@ -225,8 +244,19 @@ body {
 
     .auth-card input, 
     .auth-card select {
-        padding: 10px 14px; /* Slightly smaller padding for small screens */
+        padding: 10px 14px;
+    }
+
+    .legal-footer {
+        font-size: 0.7rem;
     }
 }
 
-
+.site-footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 0.85rem;
+            width: 100%;
+            margin-top: auto; /* Pushes footer down if using flex container */
+        }
