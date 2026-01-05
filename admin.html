@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard | Nexus</title>
     <link rel="stylesheet" href="admin.css">
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -18,6 +17,14 @@
         
         <span class="nav-label">Date Filter</span>
         <input type="date" id="datePicker">
+
+        <span class="nav-label">Team Lead Filter</span>
+        <select id="tlFilter" class="btn" style="background: white; color: black; margin-bottom: 15px; width: 100%; text-align: left;">
+            <option value="All">All Teams</option>
+            <option value="Nirdesh Kumar (NUM)">Nirdesh Kumar (NUM)</option>
+            <option value="Aravind Vishwanath (VAR)">Aravind Vishwanath (VAR)</option>
+            <option value="Sisily Jose (SJO)">Sisily Jose (SJO)</option>
+        </select>
 
         <span class="nav-label">Management</span>
         <button class="btn btn-success" onclick="exportToExcel()">📊 Export to Excel</button>
@@ -35,7 +42,7 @@
                 </p>
             </div>
             <div class="search-box">
-                <input type="text" id="staffSearch" placeholder="Search marked employees...">
+                <input type="text" id="staffSearch" placeholder="Search employees...">
             </div>
         </header>
 
@@ -50,11 +57,12 @@
             <div class="stat-card">
                 <h3 style="margin: 0 0 1.5rem 0; font-size: 1rem; color: var(--text-muted);">Quick Summary</h3>
                 <ul class="summary-list">
-                    <li><span>Total Employees</span> <strong id="sumTotal">0</strong></li>
-                    <li><span>Present Today</span> <strong id="sumPresent" style="color: var(--success);">0</strong></li>
-                    <li><span>On Leave / Absent</span> <strong id="sumLeave" style="color: var(--danger);">0</strong></li>
+                    <li><span>Total Staff</span> <strong id="sumTotal">0</strong></li>
+                    <li><span>Present</span> <strong id="sumPresent" style="color: var(--success);">0</strong></li>
+                    <li><span>Training</span> <strong id="sumTraining" style="color: var(--primary);">0</strong></li>
+                    <li><span>Absent/Leave</span> <strong id="sumLeave" style="color: var(--danger);">0</strong></li>
+                    <li><span>Not Marked</span> <strong id="sumNotMarked" style="color: var(--text-muted);">0</strong></li>
                 </ul>
-                <p style="font-size: 0.75rem; color: gray; margin-top: 10px;">* Only marked staff appear in the list below.</p>
             </div>
         </section>
 
@@ -63,6 +71,8 @@
                 <thead>
                     <tr>
                         <th>Employee Name</th>
+                        <th>TL</th>
+                        <th>Process</th>
                         <th>Status</th>
                         <th>Action</th>
                     </tr>
@@ -70,9 +80,13 @@
                 <tbody id="adminBody"></tbody>
             </table>
             <div id="emptyState" style="text-align: center; padding: 20px; display: none; color: gray;">
-                No employees marked for this date yet.
+                No employees found for this selection.
             </div>
         </section>
+
+        <div class="footer-copyright">
+            Copyright &copy; 2026 Cyient Attendance Portal | Designed by Gaurav Vishwas
+        </div>
     </main>
 </div>
 
@@ -95,16 +109,45 @@
     const db = getFirestore(app);
 
     let attendanceChart = null;
-    let markedData = []; 
     let allStaffMaster = []; 
+    let finalDisplayData = [];
+
+    const processShortForms = {
+        "Leg-Editing": "LE", "leg-editing": "LE",
+        "Leg-Position": "LP", "leg-position": "LP",
+        "Defect-Fixing": "DF", "defect-fixing": "DF",
+        "Gap-Filling": "GF", "gap-filling": "GF",
+        "Product Audit": "PA", "product audit": "PA",
+        "Mass Qc": "MQC", "mass qc": "MQC",
+        "N/A": "N/A"
+    };
+
+    const getShortTL = (fullName) => {
+        const match = fullName.match(/\(([^)]+)\)/);
+        return match ? match[1] : fullName;
+    };
+
+    const getProcessOptions = (selected) => {
+        const mainOptions = ["Leg-Editing", "Leg-Position", "Defect-Fixing", "Gap-Filling", "Product Audit", "Mass Qc"];
+        return mainOptions.map(key => 
+            `<option value="${key}" ${selected.toLowerCase() === key.toLowerCase() ? 'selected' : ''}>${key} (${processShortForms[key]})</option>`
+        ).join('');
+    };
     
     const datePicker = document.getElementById('datePicker');
+    const tlFilter = document.getElementById('tlFilter');
     const searchInput = document.getElementById('staffSearch');
 
+    // --- FIX: LOCAL TIME DATE LOGIC ---
     const now = new Date();
-    const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-    datePicker.value = today;
-    datePicker.max = today;
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const todayLocal = `${year}-${month}-${day}`; 
+
+    datePicker.value = todayLocal;
+    datePicker.max = todayLocal; // Blocks future dates in the calendar UI
+    // ---------------------------------
 
     onAuthStateChanged(auth, async user => {
         if(!user) window.location.href = "index.html";
@@ -113,7 +156,7 @@
             if(d.exists() && d.data().role !== 'admin') window.location.href = "dashboard.html";
             else {
                 await fetchTotalStaff();
-                loadReport(datePicker.value);
+                loadReport();
             }
         }
     });
@@ -122,138 +165,173 @@
         const snap = await getDocs(collection(db, "users"));
         allStaffMaster = [];
         snap.forEach(uDoc => {
-            if(uDoc.data().role === 'employee') {
-                allStaffMaster.push({ uid: uDoc.id, fullName: uDoc.data().fullName });
+            const data = uDoc.data();
+            if(data.role === 'employee') {
+                allStaffMaster.push({ 
+                    uid: uDoc.id, 
+                    fullName: data.fullName,
+                    teamLead: data.teamLead || "Not Assigned"
+                });
             }
         });
         document.getElementById('sumTotal').innerText = allStaffMaster.length;
     }
 
-    async function loadReport(date) {
-        document.getElementById('currentDateDisplay').innerText = date;
-        const attSnap = await getDocs(query(collection(db, "attendance"), where("date", "==", date)));
-        
-        markedData = [];
-        attSnap.forEach(doc => {
-            const data = doc.data();
-            markedData.push({
-                uid: data.uid,
-                fullName: data.name,
-                status: data.status,
-                date: data.date
-            });
-        });
+    async function loadReport() {
+        let date = datePicker.value;
 
-        renderDisplay(markedData);
-    }
-
-    function renderDisplay(employees) {
-        const tbody = document.getElementById('adminBody');
-        const emptyState = document.getElementById('emptyState');
-        tbody.innerHTML = "";
-        
-        if (employees.length === 0) {
-            emptyState.style.display = "block";
-        } else {
-            emptyState.style.display = "none";
+        // Security check for manual input bypass
+        if (date > todayLocal) {
+            Swal.fire("Access Denied", "Future dates are restricted.", "warning");
+            datePicker.value = todayLocal;
+            date = todayLocal;
         }
 
-        let presentCount = 0; 
-        let leaveCount = 0;
-
-        employees.forEach(emp => {
-            const status = emp.status;
-            let badgeCls = 'bg-l'; // Default Red for Absent/Leave
-            
-            if(status === "Present") {
-                presentCount++;
-                badgeCls = 'bg-p'; // Green
-            } else {
-                leaveCount++;
-                // If you want a different color for "Leave" vs "Absent", 
-                // you could add a logic here, but keeping Red for summary accuracy.
-                badgeCls = 'bg-l'; 
-            }
-            
-            tbody.innerHTML += `
-                <tr>
-                    <td style="font-weight: 600;">${emp.fullName}</td>
-                    <td><span class="badge ${badgeCls}">${status}</span></td>
-                    <td>
-                        <button class="btn btn-edit" onclick="editAttendance('${emp.uid}', '${emp.fullName}', '${status}')">✏️ Edit</button>
-                    </td>
-                </tr>`;
+        const selectedTL = tlFilter.value.toLowerCase().trim();
+        document.getElementById('currentDateDisplay').innerText = date;
+        
+        const attSnap = await getDocs(query(collection(db, "attendance"), where("date", "==", date)));
+        const attendanceMap = {};
+        attSnap.forEach(doc => {
+            attendanceMap[doc.data().uid] = doc.data();
         });
 
-        document.getElementById('sumPresent').innerText = presentCount;
-        document.getElementById('sumLeave').innerText = leaveCount;
-        updateChart(presentCount, leaveCount);
+        finalDisplayData = allStaffMaster.map(staff => {
+            const att = attendanceMap[staff.uid] || {};
+            return {
+                uid: staff.uid,
+                fullName: staff.fullName,
+                teamLead: staff.teamLead,
+                status: att.status || "", 
+                process: att.process || "N/A",
+                date: date
+            };
+        }).filter(emp => {
+            if (selectedTL === "all") return true;
+            return emp.teamLead.toLowerCase().trim() === selectedTL;
+        });
+
+        renderDisplay(finalDisplayData);
     }
 
     window.markNewEntry = async () => {
+        const date = datePicker.value;
         const staffOptions = {};
-        allStaffMaster.forEach(s => staffOptions[s.uid] = s.fullName);
+        allStaffMaster.forEach(staff => { staffOptions[staff.uid] = staff.fullName; });
 
-        const { value: selectedUid } = await Swal.fire({
-            title: 'Select Employee',
-            input: 'select',
-            inputOptions: staffOptions,
-            showCancelButton: true
+        const { value: formValues } = await Swal.fire({
+            title: 'Mark Manual Attendance',
+            html:
+                '<label>Employee</label><select id="swal-staff" class="swal2-input">' +
+                Object.entries(staffOptions).map(([id, name]) => `<option value="${id}">${name}</option>`).join('') +
+                '</select>' +
+                '<label>Process</label><select id="swal-process" class="swal2-input">' +
+                getProcessOptions("Leg-Editing") +
+                '</select>' +
+                '<label>Status</label><select id="swal-status" class="swal2-input">' +
+                '<option value="Present">Present</option>' +
+                '<option value="Training">Training</option>' +
+                '<option value="Absent">Absent</option>' +
+                '</select>',
+            preConfirm: () => ({
+                uid: document.getElementById('swal-staff').value,
+                status: document.getElementById('swal-status').value,
+                process: document.getElementById('swal-process').value,
+                name: document.getElementById('swal-staff').options[document.getElementById('swal-staff').selectedIndex].text
+            })
         });
 
-        if (selectedUid) {
-            const name = staffOptions[selectedUid];
-            editAttendance(selectedUid, name, "Present");
+        if (formValues) {
+            const docId = `${formValues.uid}_${date}`;
+            await setDoc(doc(db, "attendance", docId), {
+                uid: formValues.uid, name: formValues.name, date: date, 
+                status: formValues.status, process: formValues.process, updatedAt: new Date().toISOString()
+            }, { merge: true });
+            loadReport();
         }
     };
 
-    // --- ADDED "LEAVE" TO INPUT OPTIONS ---
-    window.editAttendance = async (uid, name, currentStatus) => {
-        const { value: newStatus } = await Swal.fire({
-            title: `Update Attendance`,
-            text: `Set status for ${name}`,
-            input: 'select',
-            inputOptions: { 
-                'Present': 'Present', 
-                'Absent': 'Absent',
-                'Leave': 'Leave' 
-            },
-            inputValue: currentStatus,
-            showCancelButton: true
+    function renderDisplay(data) {
+        const tbody = document.getElementById('adminBody');
+        tbody.innerHTML = "";
+        let counts = { Present: 0, Training: 0, AbsentLeave: 0, NotMarked: 0 };
+
+        data.forEach(emp => {
+            let badgeCls = "";
+            if(emp.status === "Present") { counts.Present++; badgeCls = "bg-p"; }
+            else if(emp.status === "Training") { counts.Training++; badgeCls = "bg-training"; }
+            else if(emp.status === "Absent" || emp.status === "Leave") { counts.AbsentLeave++; badgeCls = "bg-l"; }
+            else { counts.NotMarked++; }
+
+            const shortProc = processShortForms[emp.process] || emp.process;
+
+            tbody.innerHTML += `
+                <tr>
+                    <td style="font-weight: 600;">${emp.fullName}</td>
+                    <td style="font-size: 0.85rem;">${getShortTL(emp.teamLead)}</td>
+                    <td style="font-size: 0.85rem; color: var(--primary); font-weight:700;">${shortProc}</td>
+                    <td><span class="badge ${badgeCls}">${emp.status || 'Pending'}</span></td>
+                    <td><button class="btn btn-edit" onclick="editAttendance('${emp.uid}', '${emp.fullName}', '${emp.status}', '${emp.process}')">✏️ Edit</button></td>
+                </tr>`;
         });
 
-        if (newStatus) {
+        document.getElementById('sumPresent').innerText = counts.Present;
+        document.getElementById('sumTraining').innerText = counts.Training;
+        document.getElementById('sumLeave').innerText = counts.AbsentLeave;
+        document.getElementById('sumNotMarked').innerText = counts.NotMarked;
+        updateChart(counts.Present + counts.Training, counts.AbsentLeave + counts.NotMarked);
+    }
+
+    window.editAttendance = async (uid, name, currentStatus, currentProc) => {
+        const { value: formValues } = await Swal.fire({
+            title: `Update Attendance`,
+            html: 
+                '<label>Process</label><select id="edit-proc" class="swal2-input">' +
+                getProcessOptions(currentProc) +
+                '</select>' +
+                '<label>Status</label><select id="edit-status" class="swal2-input">' +
+                `<option value="Present" ${currentStatus==='Present'?'selected':''}>Present</option>` +
+                `<option value="Training" ${currentStatus==='Training'?'selected':''}>Training</option>` +
+                `<option value="Absent" ${currentStatus==='Absent'?'selected':''}>Absent</option>` +
+                '</select>',
+            preConfirm: () => ({
+                status: document.getElementById('edit-status').value,
+                process: document.getElementById('edit-proc').value
+            })
+        });
+
+        if (formValues) {
             const docId = `${uid}_${datePicker.value}`;
             await setDoc(doc(db, "attendance", docId), {
-                uid: uid,
-                name: name,
-                date: datePicker.value,
-                status: newStatus,
-                updatedAt: new Date().toISOString()
+                uid: uid, name: name, date: datePicker.value, 
+                status: formValues.status, process: formValues.process, updatedAt: new Date().toISOString()
             }, { merge: true });
-            loadReport(datePicker.value);
+            loadReport();
         }
     };
 
-    function updateChart(p, l) {
+    function updateChart(active, inactive) {
         const ctx = document.getElementById('pieChart').getContext('2d');
         if(attendanceChart) attendanceChart.destroy();
         attendanceChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['Present', 'Off-duty'],
-                datasets: [{ data: [p, l], backgroundColor: ['#10b981', '#f43f5e'] }]
+                labels: ['Productive', 'Absent/Unmarked'],
+                datasets: [{ data: [active, inactive], backgroundColor: ['#10b981', '#f43f5e'] }]
             },
             options: { maintainAspectRatio: false }
         });
     }
 
     window.exportToExcel = () => {
-        if(markedData.length === 0) return Swal.fire("No Data", "Nothing to export.", "info");
-        const excelRows = markedData.map(emp => ({
+        if(finalDisplayData.length === 0) return Swal.fire("No Data", "Nothing to export.", "info");
+        const excelRows = finalDisplayData.map((emp, index) => ({
+            "S.No": index + 1,
             "Employee Name": emp.fullName,
+            "TL": getShortTL(emp.teamLead),
+            "Process": processShortForms[emp.process] || emp.process,
             "Date": emp.date,
-            "Status": emp.status
+            "Status": emp.status || "Not Marked"
         }));
         const ws = XLSX.utils.json_to_sheet(excelRows);
         const wb = XLSX.utils.book_new();
@@ -263,11 +341,13 @@
 
     searchInput.addEventListener('input', (e) => {
         const term = e.target.value.toLowerCase();
-        renderDisplay(markedData.filter(emp => emp.fullName.toLowerCase().includes(term)));
+        renderDisplay(finalDisplayData.filter(emp => emp.fullName.toLowerCase().includes(term)));
     });
 
-    datePicker.addEventListener('change', (e) => loadReport(e.target.value));
-    document.getElementById('logoutBtn').onclick = () => signOut(auth).then(() => window.location.href = "index.html");
+    datePicker.addEventListener('change', loadReport);
+    tlFilter.addEventListener('change', loadReport);
+    document.getElementById('logoutBtn').onclick = () => signOut(auth);
 </script>
+
 </body>
 </html>
