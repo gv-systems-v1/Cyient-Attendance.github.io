@@ -6,6 +6,9 @@
     <title>Employee Dashboard | WorkFlow</title>
     <link rel="stylesheet" href="dashboard.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+      
+    </style>
 </head>
 <body>
 
@@ -13,8 +16,11 @@
         <div class="sidebar">
             <div class="logo">WorkFlow</div>
             <div class="user-profile">
+                <div class="welcome-msg" id="dynamicWelcome">Welcome!</div>
                 <p>Logged in as</p>
-                <div id="userName">Loading...</div>
+                <div id="userName" style="font-weight: 700; color: #0f172a; margin-bottom: 5px;">Loading...</div>
+                <div id="userTL" class="tl-info">TL: Loading...</div>
+                <button class="btn-change-tl" id="changeTLBtn">Change Team Lead</button>
             </div>
             <button class="logout-btn" id="logoutBtn">Logout</button>
         </div>
@@ -25,23 +31,35 @@
                     <h2>My Attendance</h2>
                     <p id="todayDateDisplay" style="color: #2563eb; font-weight: 600; margin: 5px 0;"></p>
                 </div>
-                
-                <div class="action-buttons">
-                    <button class="btn-dash btn-present" id="btnP">
-                        <span class="btn-icon">✓</span>
-                        <div class="btn-text">
-                            <span class="btn-title">Check In</span>
-                            <span class="btn-desc">Present</span>
-                        </div>
-                    </button>
 
-                    <button class="btn-dash btn-leave" id="btnL">
-                        <span class="btn-icon">✕</span>
-                        <div class="btn-text">
-                            <span class="btn-title">On Leave</span>
-                            <span class="btn-desc">Absent</span>
-                        </div>
-                    </button>
+                <div class="controls-container">
+                    <div class="action-buttons">
+                        <button class="btn-dash btn-present" id="btnP" disabled>
+                            <div class="btn-text"><span class="btn-title">Check In</span><span class="btn-desc">Present</span></div>
+                        </button>
+                        <button class="btn-dash" id="btnHD" style="background:#f59e0b; color:white;" disabled>
+                            <div class="btn-text"><span class="btn-title">Half Day</span><span class="btn-desc">4 Hours</span></div>
+                        </button>
+                        <button class="btn-dash" id="btnTR" style="background:#8b5cf6; color:white;" disabled>
+                            <div class="btn-text"><span class="btn-title">Training</span><span class="btn-desc">Learning</span></div>
+                        </button>
+                        <button class="btn-dash btn-leave" id="btnL" disabled>
+                            <div class="btn-text"><span class="btn-title">On Leave</span><span class="btn-desc">Absent</span></div>
+                        </button>
+                    </div>
+
+                    <div class="process-box" id="procBoxContainer">
+                        <label>SELECT PROCESS FIRST:</label>
+                        <select id="processSelect">
+                            <option value="">-- Choose Process --</option>
+                            <option value="leg-editing">Leg-Editing</option>
+                            <option value="leg-position">Leg-Position</option>
+                            <option value="defect-fixing">Defect-Fixing</option>
+                            <option value="gap-filling">Gap-Filling</option>
+                            <option value="product Audit">Product Audit</option>
+                            <option value="Mass Qc">Mass Qc</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -56,13 +74,17 @@
                 </div>
                 <div class="calendar-grid" id="calendar"></div>
             </div>
+
+            <div class="footer-copyright">
+                Copyright &copy; 2026 Attendance Portal | Designed by Gaurav Vishwas
+            </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, query, where } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
         const firebaseConfig = { 
             apiKey: "AIzaSyC_ZrkX3tODa4nDyl9DhAX0llp43i-vAHA", 
@@ -81,70 +103,92 @@
         const localDate = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
         let currentViewDate = new Date();
 
-        // 2026 Holidays
         const holidays = {
-            "2026-01-01": "New Year",
-            "2026-01-26": "Republic Day",
-            "2026-05-01": "Labour Day",
-            "2026-09-14": "Ganesh Chaturthi",
-            "2026-10-02": "Gandhi Jayanti",
-            "2026-10-21": "Dussehra",
+            "2026-01-01": "New Year", "2026-01-26": "Republic Day",
+            "2026-08-15": "Independence Day", "2026-10-02": "Gandhi Jayanti",
             "2026-12-25": "Christmas"
         };
 
         document.getElementById('todayDateDisplay').innerText = "Today: " + localDate;
 
+        const procSelect = document.getElementById('processSelect');
+        const allAttBtns = [document.getElementById('btnP'), document.getElementById('btnL'), document.getElementById('btnHD'), document.getElementById('btnTR')];
+        
+        procSelect.addEventListener('change', () => {
+            const isSelected = procSelect.value !== "";
+            allAttBtns.forEach(btn => btn.disabled = !isSelected);
+        });
+
         onAuthStateChanged(auth, async user => {
             if(!user) window.location.href="index.html";
             else {
                 const d = await getDoc(doc(db, "users", user.uid));
-                if(d.exists() && d.data().role === 'admin') window.location.href="admin.html";
-                document.getElementById('userName').innerText = d.data()?.fullName || "User";
-                
+                if(d.exists()) {
+                    if(d.data().role === 'admin') window.location.href="admin.html";
+                    const fullName = d.data().fullName;
+                    
+                    // Dynamic Welcome Message Implementation
+                    document.getElementById('dynamicWelcome').innerText = `Welcome, ${fullName.split(' ')[0]}!`;
+                    document.getElementById('userName').innerText = fullName;
+                    document.getElementById('userTL').innerText = "TL: " + (d.data().teamLead || "Not Assigned");
+                }
                 checkTodayStatus(user.uid);
                 loadCal(user.uid);
             }
         });
 
-        document.getElementById('prevMonth').onclick = () => {
-            currentViewDate.setMonth(currentViewDate.getMonth() - 1);
-            loadCal(auth.currentUser.uid);
-        };
+        document.getElementById('changeTLBtn').onclick = async () => {
+            const { value: newTL } = await Swal.fire({
+                title: 'Change Team Lead',
+                input: 'select',
+                inputOptions: {
+                    'Nirdesh kumar(NUM)': 'Nirdesh kumar(NUM)',
+                    'Aravind Vishwanath(VAR)': 'Aravind Vishwanath(VAR)',
+                    'Sisily Jose(SJO)': 'Sisily Jose(SJO)'
+                },
+                inputPlaceholder: 'Select your Team Lead',
+                showCancelButton: true
+            });
 
-        document.getElementById('nextMonth').onclick = () => {
-            currentViewDate.setMonth(currentViewDate.getMonth() + 1);
-            loadCal(auth.currentUser.uid);
-        };
+            if (newTL) {
+                const { isConfirmed } = await Swal.fire({
+                    title: 'Are you sure?',
+                    text: `Update your TL to ${newTL}?`,
+                    icon: 'question',
+                    showCancelButton: true
+                });
 
-        document.getElementById('jumpToday').onclick = () => {
-            currentViewDate = new Date();
-            loadCal(auth.currentUser.uid);
-        };
-
-        async function checkTodayStatus(uid) {
-            const todayDoc = await getDoc(doc(db, "attendance", `${uid}_${localDate}`));
-            if (todayDoc.exists()) {
-                const btnP = document.getElementById('btnP');
-                const btnL = document.getElementById('btnL');
-                btnP.disabled = true;
-                btnL.disabled = true;
-                btnP.style.opacity = "0.5";
-                btnL.style.opacity = "0.5";
-                document.querySelectorAll('.btn-title').forEach(el => el.innerText = "Marked Today");
+                if (isConfirmed) {
+                    await updateDoc(doc(db, "users", auth.currentUser.uid), { teamLead: newTL });
+                    document.getElementById('userTL').innerText = "TL: " + newTL;
+                    Swal.fire('Updated!', '', 'success');
+                }
             }
-        }
+        };
 
         async function mark(s) {
+            const process = document.getElementById('processSelect').value;
             try {
                 await setDoc(doc(db, "attendance", `${auth.currentUser.uid}_${localDate}`), { 
                     uid: auth.currentUser.uid, 
                     date: localDate, 
                     status: s, 
-                    name: document.getElementById('userName').innerText 
+                    process: process,
+                    name: document.getElementById('userName').innerText,
+                    teamLead: document.getElementById('userTL').innerText.replace('TL: ', '')
                 });
-                Swal.fire('Success', `Attendance marked as ${s}`, 'success').then(() => location.reload());
+                Swal.fire('Success', `Marked ${s}`, 'success').then(() => location.reload());
             } catch (e) {
                 Swal.fire('Error', 'Failed to mark attendance', 'error');
+            }
+        }
+
+        async function checkTodayStatus(uid) {
+            const todayDoc = await getDoc(doc(db, "attendance", `${uid}_${localDate}`));
+            if (todayDoc.exists()) {
+                allAttBtns.forEach(btn => btn.disabled = true);
+                procSelect.disabled = true;
+                document.querySelectorAll('.btn-title').forEach(el => el.innerText = "Marked Today");
             }
         }
 
@@ -156,56 +200,49 @@
             
             const cal = document.getElementById('calendar');
             cal.innerHTML = ""; 
-
             const vYear = currentViewDate.getFullYear();
             const vMonth = currentViewDate.getMonth();
-            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            document.getElementById('monthDisplay').innerText = `${monthNames[vMonth]} ${vYear}`;
+            document.getElementById('monthDisplay').innerText = `${currentViewDate.toLocaleString('default', { month: 'long' })} ${vYear}`;
 
-            const daysArr = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            daysArr.forEach(day => {
+            ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
                 cal.innerHTML += `<div class="day-name">${day}</div>`;
             });
 
             const firstDayIndex = new Date(vYear, vMonth, 1).getDay(); 
             const daysInMonth = new Date(vYear, vMonth + 1, 0).getDate();
 
-            for(let x = 0; x < firstDayIndex; x++) {
-                cal.innerHTML += `<div class="day day-hidden"></div>`;
-            }
+            for(let x = 0; x < firstDayIndex; x++) cal.innerHTML += `<div class="day day-hidden"></div>`;
             
             for(let i = 1; i <= daysInMonth; i++) {
-                const monthPad = String(vMonth + 1).padStart(2, '0');
-                const dayPad = String(i).padStart(2, '0');
-                const dateKey = `${vYear}-${monthPad}-${dayPad}`;
-                
+                const dateKey = `${vYear}-${String(vMonth+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
                 const dayOfWeek = new Date(vYear, vMonth, i).getDay();
                 const holidayName = holidays[dateKey];
                 
-                let cls = "";
-                if (logs[dateKey] === 'Present') cls = 'present';
-                else if (logs[dateKey] === 'Leave') cls = 'leave';
+                let statusCls = "";
+                if (logs[dateKey]) statusCls = logs[dateKey].toLowerCase().replace(" ", "-");
                 
-                const todayCls = (dateKey === localDate) ? "today-circle" : "";
-                
-                // Set Weekend or Holiday logic
-                let specialCls = "";
-                if (holidayName) specialCls = "holiday";
-                else if (dayOfWeek === 0 || dayOfWeek === 6) specialCls = "weekend";
+                let dayTypeCls = "";
+                if (holidayName) dayTypeCls = "holiday";
+                else if (dayOfWeek === 0 || dayOfWeek === 6) dayTypeCls = "weekend";
+
+                const isToday = (dateKey === localDate) ? "today-circle" : "";
 
                 cal.innerHTML += `
-                    <div class="day ${cls} ${todayCls} ${specialCls}">
+                    <div class="day ${statusCls} ${dayTypeCls} ${isToday}">
                         ${i}
-                        ${holidayName ? `<span class="holiday-label">${holidayName}</span>` : ""}
+                        ${holidayName ? `<span class="holiday-label" style="font-size:0.5rem; display:block;">${holidayName}</span>` : ""}
                     </div>`;
             }
         }
 
         document.getElementById('btnP').onclick = () => mark('Present');
         document.getElementById('btnL').onclick = () => mark('Leave');
+        document.getElementById('btnHD').onclick = () => mark('Half Day');
+        document.getElementById('btnTR').onclick = () => mark('Training');
         document.getElementById('logoutBtn').onclick = () => signOut(auth);
+        document.getElementById('prevMonth').onclick = () => { currentViewDate.setMonth(currentViewDate.getMonth() - 1); loadCal(auth.currentUser.uid); };
+        document.getElementById('nextMonth').onclick = () => { currentViewDate.setMonth(currentViewDate.getMonth() + 1); loadCal(auth.currentUser.uid); };
+        document.getElementById('jumpToday').onclick = () => { currentViewDate = new Date(); loadCal(auth.currentUser.uid); };
     </script>
 </body>
 </html>
-
-
