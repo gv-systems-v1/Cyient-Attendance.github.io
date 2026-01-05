@@ -284,4 +284,94 @@ td {
     font-family: 'Plus Jakarta Sans', sans-serif !important; 
     border-radius: 20px !important; 
 }
+/* --- Mark Attendance Popup Styling (SweetAlert) --- */
 
+/* Container for the popup */
+.swal2-popup {
+    padding: 2rem !important;
+    border: 1px solid var(--border) !important;
+}
+
+/* Titles inside the popup */
+.swal2-title {
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    color: var(--text-main) !important;
+    margin-bottom: 1.5rem !important;
+}
+
+/* Labels for the dropdowns */
+.swal2-html-container label {
+    display: block;
+    text-align: left;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin: 1rem 0 0.4rem 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Style for the select dropdowns inside the popup */
+.swal2-input, .swal2-select {
+    height: 3rem !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--border) !important;
+    font-size: 0.95rem !important;
+    color: var(--text-main) !important;
+    background-color: #f8fafc !important; /* Slight off-white */
+    box-shadow: none !important;
+    transition: all 0.2s ease !important;
+    width: 90% !important;
+    margin: 0 auto 1rem auto !important;
+}
+
+.swal2-input:focus {
+    border-color: var(--primary) !important;
+    background-color: var(--white) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+}
+
+/* Confirm Button (The Save/Mark button) */
+.swal2-confirm {
+    background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%) !important;
+    padding: 12px 30px !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    font-size: 0.9rem !important;
+}
+
+/* Cancel Button */
+.swal2-cancel {
+    background: transparent !important;
+    color: var(--text-muted) !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+}
+
+.swal2-cancel:hover {
+    text-decoration: underline !important;
+    background: transparent !important;
+}
+
+ .bg-training { background: #e0e7ff; color: #4338ca; }
+    .swal2-input { margin: 10px auto !important; width: 85% !important; border-radius: 8px !important; }
+    label { font-size: 0.85rem; font-weight: 700; color: #64748b; display: block; text-align: left; margin-left: 7%; }
+    
+    .footer-copyright {
+        text-align: center;
+        padding: 20px;
+        margin-top: 30px;
+        color: #94a3b8;
+        font-size: 0.85rem;
+        border-top: 1px solid #e2e8f0;
+    }
+    
+    .main-content {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+    .table-card {
+        flex: 1;
+    }
