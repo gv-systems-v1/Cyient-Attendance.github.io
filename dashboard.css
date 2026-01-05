@@ -45,6 +45,15 @@ body {
     margin-bottom: 50px; 
 }
 
+/* Welcome & User Profile */
+.welcome-msg {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--primary);
+    margin-bottom: 5px;
+    line-height: 1.2;
+}
+
 .user-profile p { 
     font-size: 11px; 
     color: #94a3b8; 
@@ -55,7 +64,41 @@ body {
 #userName { 
     font-size: 18px; 
     font-weight: 600; 
-    margin-bottom: 40px; 
+    margin-bottom: 10px; 
+}
+
+#userTL {
+    font-size: 13px;
+    color: #94a3b8;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+
+/* Change Team Lead Button */
+.btn-change-tl {
+    background: #1e293b;
+    color: #f1f5f9;
+    border: 1px solid #334155;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.btn-change-tl:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.sidebar-footer {
+    margin-top: 15px;
+    font-size: 10px;
+    color: #475569;
+    text-align: center;
 }
 
 /* --- LOGOUT BUTTON --- */
@@ -80,10 +123,6 @@ body {
     transform: translateY(-2px);
 }
 
-.logout-btn:active {
-    transform: translateY(0);
-}
-
 /* --- MAIN CONTENT --- */
 .main-content { 
     margin-left: 260px; 
@@ -101,23 +140,52 @@ body {
     gap: 20px;
 }
 
+/* --- PROCESS SELECTOR --- */
+.process-box {
+    background: var(--white);
+    padding: 15px 20px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    min-width: 280px;
+}
+
+.process-box label {
+    display: block;
+    font-size: 10px;
+    font-weight: 800;
+    color: #64748b;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+}
+
+.process-box select {
+    width: 100%;
+    border: 1.5px solid var(--border);
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--dark-bg);
+    outline: none;
+    cursor: pointer;
+}
+
 /* --- ACTION BUTTONS --- */
 .action-buttons { 
     display: flex; 
-    gap: 15px; 
+    gap: 12px; 
+    flex-wrap: wrap;
 }
 
 .btn-dash {
     display: flex; 
     align-items: center; 
-    padding: 12px 20px;
+    padding: 12px 18px;
     border: none; 
     border-radius: 14px; 
     cursor: pointer;
     transition: all 0.3s; 
     color: white;
-    flex: 1;
-    min-width: 160px;
+    min-width: 150px;
 }
 
 .btn-icon { 
@@ -135,19 +203,21 @@ body {
 
 .btn-title { display: block; font-weight: 700; font-size: 14px; }
 .btn-desc { font-size: 10px; opacity: 0.8; }
+
+/* Button Variants */
 .btn-present { background: linear-gradient(135deg, #10b981, #059669); }
 .btn-leave { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.btn-halfday { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.btn-training { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
 
-.btn-dash:hover { 
+.btn-dash:hover:not(:disabled) { 
     transform: translateY(-3px); 
     box-shadow: 0 10px 15px rgba(0,0,0,0.1); 
 }
 
 .btn-dash:disabled { 
-    opacity: 0.5; 
+    opacity: 0.4; 
     cursor: not-allowed; 
-    transform: none !important; 
-    box-shadow: none !important;
 }
 
 /* --- CALENDAR --- */
@@ -164,15 +234,10 @@ body {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 25px;
-    flex-wrap: wrap;
     gap: 15px;
 }
 
-.nav-controls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
+.nav-controls { display: flex; align-items: center; gap: 10px; }
 
 .nav-arrow {
     background: var(--primary);
@@ -182,11 +247,9 @@ body {
     height: 36px;
     border-radius: 50%;
     cursor: pointer;
-    font-weight: bold;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
 }
 
 .btn-today {
@@ -197,7 +260,6 @@ body {
     cursor: pointer;
     font-size: 13px;
     font-weight: 600;
-    color: var(--dark-bg);
 }
 
 .calendar-header-text { 
@@ -223,7 +285,7 @@ body {
 }
 
 .day {
-    height: 80px; 
+    height: 85px; 
     border: 1px solid var(--border); 
     border-radius: 12px;
     display: flex; 
@@ -233,17 +295,23 @@ body {
     font-weight: bold; 
     color: #64748b;
     position: relative;
+    transition: all 0.2s;
 }
 
-/* --- SPECIAL DAY COLORS --- */
+/* --- CALENDAR STATUS COLORS --- */
 .present { background: #dcfce7 !important; color: #15803d; border-color: #86efac; }
 .leave { background: #fee2e2 !important; color: #b91c1c; border-color: #fca5a5; }
-.today-circle { border: 2.5px solid var(--primary) !important; color: var(--primary); background: rgba(37, 99, 235, 0.05); }
+.half-day { background: #fef3c7 !important; color: #92400e; border-color: #fcd34d; }
+.training { background: #f3e8ff !important; color: #6b21a8; border-color: #d8b4fe; }
 
-/* Saturday/Sunday Style */
-.weekend { background-color: #f1f5f9 !important; color: #94a3b8 !important; border-style: dashed !important; }
+.today-circle { 
+    border: 2.5px solid var(--primary) !important; 
+    color: var(--primary); 
+    background: rgba(37, 99, 235, 0.05); 
+}
 
-/* Holiday Style */
+/* Weekends & Holidays */
+.weekend { background-color: #fff1f2 !important; color: #e11d48 !important; border-style: dashed !important; }
 .holiday { background-color: #fef9c3 !important; color: #854d0e !important; border: 1px solid #fde047 !important; }
 
 .holiday-label {
@@ -254,18 +322,57 @@ body {
     margin-top: 4px;
 }
 
-.day-hidden { border: none; background: transparent; }
+/* --- FOOTER --- */
+.footer-copyright {
+    margin-top: 40px;
+    text-align: center;
+    padding: 20px;
+    font-size: 13px;
+    color: #94a3b8;
+    border-top: 1px solid var(--border);
+}
+
+.footer-copyright strong { color: var(--primary); }
 
 /* --- RESPONSIVE --- */
 @media (max-width: 1024px) {
-    .sidebar { width: 80px; padding: 40px 15px; }
-    .sidebar .logo, .sidebar #userName, .sidebar .user-profile p { display: none; }
-    .main-content { margin-left: 80px; width: calc(100% - 80px); padding: 30px; }
+    .sidebar { width: 80px; padding: 40px 10px; }
+    .sidebar .logo, .sidebar .welcome-msg, .sidebar #userName, .sidebar .user-profile p, .sidebar #userTL, .sidebar .btn-change-tl, .sidebar-footer { display: none; }
+    .main-content { margin-left: 80px; width: calc(100% - 80px); }
 }
 
 @media (max-width: 768px) {
     .dashboard-wrapper { flex-direction: column; }
     .sidebar { position: relative; width: 100%; height: auto; padding: 20px; }
     .main-content { margin-left: 0; width: 100%; padding: 20px; }
-    .action-buttons { flex-direction: column; }
+    .header-flex { flex-direction: column; align-items: flex-start; }
+    .action-buttons { width: 100%; }
+    .btn-dash { width: 100%; }
 }
+
+  /* --- Refined Layout Styles --- */
+        .welcome-msg { font-size: 1.1rem; font-weight: 800; color: #2563eb; margin-bottom: 5px; }
+        .tl-info { font-size: 0.85rem; color: #64748b; margin-bottom: 15px; font-weight: 600; }
+        
+        /* New Process Box Design & Positioning */
+        .process-box { 
+            background: #ffffff; 
+            padding: 10px 15px; 
+            border-radius: 12px; 
+            border: 1.5px solid #e2e8f0;
+            min-width: 200px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .process-box label { display: block; font-size: 0.65rem; font-weight: 800; color: #2563eb; margin-bottom: 4px; }
+        .process-box select { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 0.85rem; cursor: pointer; }
+        
+        /* Aligning Header Elements */
+        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; gap: 20px; }
+        .controls-container { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        
+        /* Sidebar and Buttons */
+        .btn-change-tl { background: #6366f1; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; width: 100%; transition: 0.3s; }
+        .btn-change-tl:hover { background: #4f46e5; }
+        .footer-copyright { text-align: center; padding: 20px; color: #94a3b8; font-size: 0.8rem; margin-top: auto; border-top: 1px solid #e2e8f0; width: 100%; }
+        .action-buttons { display: flex; gap: 10px; }
+        .btn-dash:disabled { opacity: 0.5; cursor: not-allowed; }
