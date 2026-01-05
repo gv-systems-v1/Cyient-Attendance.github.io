@@ -7,6 +7,10 @@
     <link rel="stylesheet" href="auth.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        /* Styling for the footer */
+        
+    </style>
 </head>
 <body>
     <div class="auth-wrapper">
@@ -14,7 +18,7 @@
             <div class="info-content">
                 <h1>Cyient Attendance</h1>
                 <p>Welcome back! Please login to access your dashboard and manage your attendance records at the Warangal Campus.</p>
-                <div class="badge">GV Systems v1.0</div>
+                <div class="badge">Gaurav Vishwas AttSys v2.0</div>
             </div>
         </div>
 
@@ -43,6 +47,10 @@
             </div>
         </div>
     </div>
+
+    <footer class="site-footer">
+        Copyright &copy; 2026 Cyient Attendance Portal | Designed by Gaurav Vishwas
+    </footer>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
@@ -74,20 +82,14 @@
             }
 
             try {
-                // UI Loading State
                 btn.innerText = "Authenticating...";
                 btn.style.opacity = "0.7";
 
-                // Firebase Auth
                 const cred = await signInWithEmailAndPassword(auth, e, p);
-                
-                // Fetch user role from Firestore
                 const userDoc = await getDoc(doc(db, "users", cred.user.uid));
                 
                 if (userDoc.exists()) {
                     const role = userDoc.data().role;
-                    
-                    // Success Toast
                     const Toast = Swal.mixin({
                         toast: true,
                         position: 'top-end',
@@ -101,7 +103,6 @@
                         title: 'Signed in successfully'
                     });
 
-                    // Redirect based on role
                     window.location.href = (role === 'admin') ? "admin.html" : "dashboard.html";
                 } else {
                     Swal.fire('Error', 'User data not found in database', 'error');
@@ -109,12 +110,10 @@
 
             } catch (err) { 
                 Swal.fire('Login Failed', 'Invalid email or password', 'error');
-                btn.innerText = "Login to Portal";
+                btn.innerText = "Login";
                 btn.style.opacity = "1";
             }
         };
     </script>
 </body>
-
 </html>
-
