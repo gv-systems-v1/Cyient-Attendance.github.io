@@ -35,7 +35,7 @@ body {
 .info-section {
     flex: 1.2;
     background: linear-gradient(rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.7)), 
-                url('cyient.jpg');
+                url('Cyient.jpg');
     background-size: cover;
     background-position: center;
     display: flex;
@@ -260,3 +260,4 @@ body {
             width: 100%;
             margin-top: auto; /* Pushes footer down if using flex container */
         }
+
